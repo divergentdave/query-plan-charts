@@ -13,6 +13,12 @@ class Backend:
 
 
 class QueryPlan:
+    """
+    Base class for query plans from each database backend. Subclasses must
+    override __eq__ in a way that splits plans into equivalence classes based
+    on their structure. It should ignore row counts, costs, time durations,
+    and other values that will almost always vary between plans.
+    """
     pass
 
 

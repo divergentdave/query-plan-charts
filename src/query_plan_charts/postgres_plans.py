@@ -1,5 +1,3 @@
-import json
-
 import psycopg
 from testcontainers.postgres import PostgresContainer  # type: ignore
 
@@ -47,11 +45,79 @@ class Postgres(Backend):
     def plan_query_structured(self, query: str) -> "PostgresPlan":
         with self.connection.cursor() as cursor:
             cursor.execute(f"EXPLAIN (FORMAT JSON) {query};")
-            return json.loads("".join(row for row in cursor))
+            doc, = cursor.fetchone()
+            if not isinstance(doc, list):
+                raise Exception("Plan output was not a list")
+            if len(doc) != 1:
+                raise Exception(
+                    "Outer list in plan output has {} elements"
+                    .format(len(doc)))
+            return PostgresPlan(doc[0]["Plan"])
+
+
+PLAN_KEYS_SIMPLE_COMPARISONS = [
+    "Node Type",
+    "Alias",
+    "Async Capable",
+    "CTE Name",
+    "Filter",
+    "Group Key",
+    "Index Cond",
+    "Index Name",
+    "Inner Unique",
+    "Join Filter",
+    "Join Type",
+    "Operation",
+    "Parallel Aware",
+    "Parent Relationship",
+    "Partial Mode",
+    "Relation Name",
+    "Scan Direction",
+    "Sort Key",
+    "Strategy",
+    "Subplan Name",
+]
+PLAN_KEYS_EXPECTED = set(PLAN_KEYS_SIMPLE_COMPARISONS).union({
+    "Plans",
+    # We ignore the following keys when comparing.
+    "Startup Cost",
+    "Total Cost",
+    "Plan Rows",
+    "Plan Width",
+})
+
+
+def plan_eq(left, right) -> bool:
+    for key in PLAN_KEYS_SIMPLE_COMPARISONS:
+        if left.get(key) != right.get(key):
+            return False
+
+    for plan_dict in (left, right):
+        for key in plan_dict.keys():
+            if key not in PLAN_KEYS_EXPECTED:
+                raise Exception(
+                    "Unexpected key in plan: {} (with value {})"
+                    .format(key, plan_dict[key]))
+
+    left_subplans = left.get("Plans")
+    right_subplans = right.get("Plans")
+    if (left_subplans is None) != (right_subplans is None):
+        return False
+    if left_subplans is not None and right_subplans is not None:
+        if len(left_subplans) != len(right_subplans):
+            return False
+        for (left_subplan, right_subplan) in zip(left_subplans,
+                                                 right_subplans):
+            if not plan_eq(left_subplan, right_subplan):
+                return False
+    return True
 
 
 class PostgresPlan(QueryPlan):
+    def __init__(self, plan):
+        self.plan = plan
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PostgresPlan):
             return False
-        raise NotImplementedError()
+        return plan_eq(self.plan, other.plan)

@@ -38,6 +38,7 @@ def run_single_case(setup_statements: list[ParameterizedStatement],
         print(parameter_values)
         print(backend.plan_query_text(target_query))
         print()
+        return backend.plan_query_structured(target_query)
 
 
 def run_0d(setup_statements: list[ParameterizedStatement],
@@ -64,5 +65,10 @@ def run_2d(setup_statements: list[ParameterizedStatement],
         parameter_2.start, parameter_2.stop, parameter_2.steps)
     parameter_pairs = itertools.product(
         parameter_1_values, parameter_2_values)
+    last_plan = None
     for (value_1, value_2) in tqdm.tqdm(parameter_pairs):
-        run_single_case(setup_statements, [value_1, value_2], target_query)
+        plan = run_single_case(
+            setup_statements, [value_1, value_2], target_query)
+        if last_plan is not None:
+            print(last_plan == plan)
+        last_plan = plan
