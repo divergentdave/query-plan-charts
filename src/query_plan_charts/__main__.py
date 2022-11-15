@@ -1,5 +1,6 @@
 import argparse
 import logging
+import sys
 
 try:
     import tomllib  # type: ignore
@@ -7,6 +8,7 @@ except ModuleNotFoundError:
     import tomli as tomllib  # type: ignore
 
 from . import run
+from .base import ParameterConfig, ParameterizedStatement
 
 
 def main():
@@ -31,9 +33,108 @@ def main():
     with open(args.configuration, "rb") as f:
         config_dict = tomllib.load(f)
 
-    print(config_dict)
+    if "setup_statements" not in config_dict:
+        print(
+            "Missing 'setup_statements' value in configuration file",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if not isinstance(config_dict["setup_statements"], list):
+        print("Value for 'setup_statements' must be a list", file=sys.stderr)
+        sys.exit(1)
+    if "target_query" not in config_dict:
+        print(
+            "Missing 'target_query' value in configuration file",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if not isinstance(config_dict["target_query"], str):
+        print("Value for 'target_query' must be a string", file=sys.stderr)
+        sys.exit(1)
 
-    run()
+    setup_statements = []
+    parameters = []
+    for raw_statement in config_dict["setup_statements"]:
+        if isinstance(raw_statement, str):
+            setup_statements.append(ParameterizedStatement(raw_statement, 0))
+        elif isinstance(raw_statement, dict):
+            if "statement" not in raw_statement:
+                print("Statement table is missing a value for 'statement'",
+                      file=sys.stderr)
+                sys.exit(1)
+            if not isinstance(raw_statement["statement"], str):
+                print(
+                    "Value for 'statement' must be a string",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+            if "parameters" not in raw_statement:
+                print("Statement table is missing a value for 'parameters'",
+                      file=sys.stderr)
+                sys.exit(1)
+            if not isinstance(raw_statement["parameters"], list):
+                print(
+                    "Value for 'parameters' must be an array",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+            setup_statements.append(ParameterizedStatement(
+                raw_statement["statement"],
+                len(raw_statement["parameters"]),
+            ))
+
+            for raw_parameter in raw_statement["parameters"]:
+                if "start" not in raw_parameter:
+                    print("Statement table is missing a value for 'start'",
+                          file=sys.stderr)
+                    sys.exit(1)
+                if not isinstance(raw_parameter["start"], int):
+                    print(
+                        "Value for 'start' must be an integer",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                if "stop" not in raw_parameter:
+                    print("Statement table is missing a value for 'stop'",
+                          file=sys.stderr)
+                    sys.exit(1)
+                if not isinstance(raw_parameter["stop"], int):
+                    print(
+                        "Value for 'stop' must be an integer",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                if "steps" not in raw_parameter:
+                    print("Statement table is missing a value for 'steps'",
+                          file=sys.stderr)
+                    sys.exit(1)
+                if not isinstance(raw_parameter["steps"], int):
+                    print(
+                        "Value for 'steps' must be an integer",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+                parameters.append(ParameterConfig(
+                    raw_parameter["start"],
+                    raw_parameter["stop"],
+                    raw_parameter["steps"],
+                ))
+        else:
+            print(
+                "Each statement must be provided as a string or a key-value "
+                "table",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    if len(parameters) > 2:
+        print("Too many parameters in queries", file=sys.stderr)
+        sys.exit(1)
+
+    run(setup_statements, parameters, config_dict["target_query"])
 
 
 if __name__ == "__main__":
