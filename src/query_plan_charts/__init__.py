@@ -5,6 +5,8 @@ import typing
 
 import numpy
 import matplotlib.pyplot  # type: ignore
+from matplotlib.cm import get_cmap  # type: ignore
+from matplotlib.colors import NoNorm  # type: ignore
 import tqdm
 
 from .base import ParameterizedStatement, ParameterConfig, QueryPlan
@@ -148,22 +150,29 @@ def run_2d(setup_statements: list[ParameterizedStatement],
             setup_statements, [value_1, value_2], target_query)
         class_idx = equivalence_classes.add((i, j), plan)
         colors[i, j] = class_idx
+    class_count = len(equivalence_classes.classes)
 
     mesh_x = centers_to_boundaries(parameter_1_values)
     mesh_y = centers_to_boundaries(parameter_2_values)
 
     matplotlib.pyplot.xscale("log")
     matplotlib.pyplot.yscale("log")
+    color_map = get_cmap("viridis", class_count)
+    norm = NoNorm(vmin=0, vmax=class_count - 1)
     quadmesh = matplotlib.pyplot.pcolormesh(
         mesh_x,
         mesh_y,
         colors,
-        cmap="tab20",
+        cmap=color_map,
+        norm=norm,
     )
-    colorbar = matplotlib.pyplot.colorbar(quadmesh)
+    colorbar = matplotlib.pyplot.colorbar(
+        quadmesh,
+    )
     colorbar.set_ticks(
-        list(range(len(equivalence_classes.classes))),
+        list(range(class_count)),
         labels=[cls.members[0].summary()
                 for cls in equivalence_classes.classes],
     )
+    colorbar.ax.invert_yaxis()
     matplotlib.pyplot.show()
