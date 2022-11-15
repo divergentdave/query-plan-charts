@@ -70,9 +70,9 @@ def main():
                 sys.exit(1)
 
             if "parameters" not in raw_statement:
-                print("Statement table is missing a value for 'parameters'",
-                      file=sys.stderr)
-                sys.exit(1)
+                setup_statements.append(ParameterizedStatement(
+                    raw_statement["statement"], 0))
+                continue
             if not isinstance(raw_statement["parameters"], list):
                 print(
                     "Value for 'parameters' must be an array",
