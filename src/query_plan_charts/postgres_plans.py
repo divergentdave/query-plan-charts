@@ -113,6 +113,20 @@ def plan_eq(left, right) -> bool:
     return True
 
 
+def plan_summary_gen(node):
+    yield node["Node Type"]
+    if "Plans" in node:
+        yield "("
+        first = True
+        for child in node["Plans"]:
+            if first:
+                first = False
+            else:
+                yield ", "
+            yield from plan_summary_gen(child)
+        yield ")"
+
+
 class PostgresPlan(QueryPlan):
     def __init__(self, plan):
         self.plan = plan
@@ -121,3 +135,6 @@ class PostgresPlan(QueryPlan):
         if not isinstance(other, PostgresPlan):
             return False
         return plan_eq(self.plan, other.plan)
+
+    def summary(self) -> str:
+        return "".join(plan_summary_gen(self.plan))

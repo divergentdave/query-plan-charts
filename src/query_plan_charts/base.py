@@ -19,7 +19,9 @@ class QueryPlan:
     on their structure. It should ignore row counts, costs, time durations,
     and other values that will almost always vary between plans.
     """
-    pass
+
+    def summary(self) -> str:
+        raise NotImplementedError()
 
 
 class ParameterizedStatement:

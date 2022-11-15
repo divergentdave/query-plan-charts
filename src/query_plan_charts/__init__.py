@@ -154,10 +154,16 @@ def run_2d(setup_statements: list[ParameterizedStatement],
 
     matplotlib.pyplot.xscale("log")
     matplotlib.pyplot.yscale("log")
-    matplotlib.pyplot.pcolormesh(
+    quadmesh = matplotlib.pyplot.pcolormesh(
         mesh_x,
         mesh_y,
         colors,
         cmap="tab20",
+    )
+    colorbar = matplotlib.pyplot.colorbar(quadmesh)
+    colorbar.set_ticks(
+        list(range(len(equivalence_classes.classes))),
+        labels=[cls.members[0].summary()
+                for cls in equivalence_classes.classes],
     )
     matplotlib.pyplot.show()
