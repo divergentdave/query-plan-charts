@@ -7,7 +7,7 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib  # type: ignore
 
-from . import run
+from . import run_0d, run_1d, run_2d
 from .base import ParameterConfig, ParameterizedStatement
 
 
@@ -19,6 +19,16 @@ def main():
                         help="Verbosity level. "
                         "This may be specified up to three times.")
     args = parser.parse_args()
+
+    # Clear out extra logging handlers set up by the testcontainers library.
+    # These would result in some messages being printed twice.
+    logging.getLogger("testcontainers.core.container").handlers.clear()
+    logging.getLogger("testcontainers.core.waiting_utils").handlers.clear()
+
+    # Reset level on testcontainers loggers as well
+    logging.getLogger("testcontainers.core.container").setLevel(logging.NOTSET)
+    logging.getLogger("testcontainers.core.waiting_utils").setLevel(
+        logging.NOTSET)
 
     logging.basicConfig()
     if not args.verbose:
@@ -133,8 +143,13 @@ def main():
     if len(parameters) > 2:
         print("Too many parameters in queries", file=sys.stderr)
         sys.exit(1)
-
-    run(setup_statements, parameters, config_dict["target_query"])
+    elif len(parameters) == 2:
+        run_2d(setup_statements,
+               parameters[0], parameters[1], config_dict["target_query"])
+    elif len(parameters) == 1:
+        run_1d(setup_statements, parameters[0], config_dict["target_query"])
+    elif len(parameters) == 0:
+        run_0d(setup_statements, config_dict["target_query"])
 
 
 if __name__ == "__main__":

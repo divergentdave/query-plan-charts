@@ -1,5 +1,5 @@
 class Backend:
-    def execute_statement(self, statement: str, parameter_values: list):
+    def execute_statement(self, statement: str, parameter_values: list[int]):
         raise NotImplementedError()
 
     def prepare_indexes(self):
