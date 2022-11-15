@@ -92,14 +92,16 @@ def centers_to_boundaries(centers):
 
 
 def run_0d(setup_statements: list[ParameterizedStatement],
-           target_query: str):
+           target_query: str,
+           _title: str):
     plan = run_single_case(setup_statements, [], target_query)
     print(plan.text())
 
 
 def run_1d(setup_statements: list[ParameterizedStatement],
            parameter: ParameterConfig,
-           target_query: str):
+           target_query: str,
+           _title: str):
     parameter_values = choose_parameter_values(
         parameter.start, parameter.stop, parameter.steps)
 
@@ -121,7 +123,8 @@ def run_1d(setup_statements: list[ParameterizedStatement],
 def run_2d(setup_statements: list[ParameterizedStatement],
            parameter_1: ParameterConfig,
            parameter_2: ParameterConfig,
-           target_query: str):
+           target_query: str,
+           title: str):
     parameter_1_values = choose_parameter_values(
         parameter_1.start, parameter_1.stop, parameter_1.steps)
     parameter_2_values = choose_parameter_values(
@@ -163,6 +166,7 @@ def run_2d(setup_statements: list[ParameterizedStatement],
         cmap=color_map,
         norm=norm,
     )
+    quadmesh.axes.set_title(title)
     quadmesh.axes.set_xlabel(parameter_1.name)
     quadmesh.axes.set_ylabel(parameter_2.name)
     colorbar = matplotlib.pyplot.colorbar(

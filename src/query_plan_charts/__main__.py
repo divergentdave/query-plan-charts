@@ -51,6 +51,13 @@ def main():
     if not isinstance(config_dict["target_query"], str):
         print("Value for 'target_query' must be a string", file=sys.stderr)
         sys.exit(1)
+    if "title" not in config_dict:
+        title = ""
+    else:
+        if not isinstance(config_dict["title"], str):
+            print("Value for 'title' must be a string", file=sys.stderr)
+            sys.exit(1)
+        title = config_dict["title"]
 
     setup_statements = []
     parameters = []
@@ -145,12 +152,26 @@ def main():
         print("Too many parameters in queries", file=sys.stderr)
         sys.exit(1)
     elif len(parameters) == 2:
-        run_2d(setup_statements,
-               parameters[0], parameters[1], config_dict["target_query"])
+        run_2d(
+            setup_statements,
+            parameters[0],
+            parameters[1],
+            config_dict["target_query"],
+            title,
+        )
     elif len(parameters) == 1:
-        run_1d(setup_statements, parameters[0], config_dict["target_query"])
+        run_1d(
+            setup_statements,
+            parameters[0],
+            config_dict["target_query"],
+            title,
+        )
     elif len(parameters) == 0:
-        run_0d(setup_statements, config_dict["target_query"])
+        run_0d(
+            setup_statements,
+            config_dict["target_query"],
+            title,
+        )
 
 
 if __name__ == "__main__":
