@@ -20,16 +20,6 @@ def main():
                         "This may be specified up to three times.")
     args = parser.parse_args()
 
-    # Clear out extra logging handlers set up by the testcontainers library.
-    # These would result in some messages being printed twice.
-    logging.getLogger("testcontainers.core.container").handlers.clear()
-    logging.getLogger("testcontainers.core.waiting_utils").handlers.clear()
-
-    # Reset level on testcontainers loggers as well
-    logging.getLogger("testcontainers.core.container").setLevel(logging.NOTSET)
-    logging.getLogger("testcontainers.core.waiting_utils").setLevel(
-        logging.NOTSET)
-
     logging.basicConfig()
     if not args.verbose:
         logging.getLogger().setLevel(logging.ERROR)

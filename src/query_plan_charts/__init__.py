@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import itertools
+import logging
 import typing
 
 import numpy
@@ -8,6 +9,21 @@ import tqdm
 
 from .base import ParameterizedStatement, ParameterConfig, QueryPlan
 from .postgres_plans import Postgres
+
+
+def undo_testcontainers_logging_changes():
+    # Clear out extra logging handlers set up by the testcontainers library.
+    # These would result in some messages being printed twice.
+    logging.getLogger("testcontainers.core.container").handlers.clear()
+    logging.getLogger("testcontainers.core.waiting_utils").handlers.clear()
+
+    # Reset level on testcontainers loggers as well
+    logging.getLogger("testcontainers.core.container").setLevel(logging.NOTSET)
+    logging.getLogger("testcontainers.core.waiting_utils").setLevel(
+        logging.NOTSET)
+
+
+undo_testcontainers_logging_changes()
 
 
 def choose_parameter_values(start, end, max_steps):
