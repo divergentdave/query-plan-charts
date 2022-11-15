@@ -55,10 +55,7 @@ def run_single_case(setup_statements: list[ParameterizedStatement],
 
         backend.prepare_indexes()
 
-        return (
-            backend.plan_query_structured(target_query),
-            backend.plan_query_text(target_query),
-        )
+        return backend.plan_query(target_query)
 
 
 @dataclass
@@ -96,8 +93,8 @@ def centers_to_boundaries(centers):
 
 def run_0d(setup_statements: list[ParameterizedStatement],
            target_query: str):
-    _plan, plan_text = run_single_case(setup_statements, [], target_query)
-    print(plan_text)
+    plan = run_single_case(setup_statements, [], target_query)
+    print(plan.text())
 
 
 def run_1d(setup_statements: list[ParameterizedStatement],
@@ -116,7 +113,7 @@ def run_1d(setup_statements: list[ParameterizedStatement],
     # its length and show a progress bar.
     enumerated = list(enumerate(parameter_values.tolist()))
     for (i, parameter_value) in tqdm.tqdm(enumerated):
-        plan, _plan_text = run_single_case(
+        plan = run_single_case(
             setup_statements, [parameter_value], target_query)
         equivalence_classes.add(i, plan)
 
@@ -146,7 +143,7 @@ def run_2d(setup_statements: list[ParameterizedStatement],
         dtype="int8",
     )
     for ((i, value_1), (j, value_2)) in tqdm.tqdm(parameter_pairs):
-        plan, _plan_text = run_single_case(
+        plan = run_single_case(
             setup_statements, [value_1, value_2], target_query)
         class_idx = equivalence_classes.add((i, j), plan)
         colors[i, j] = class_idx
@@ -175,4 +172,11 @@ def run_2d(setup_statements: list[ParameterizedStatement],
                 for cls in equivalence_classes.classes],
     )
     colorbar.ax.invert_yaxis()
+
+    for (i, klass) in enumerate(equivalence_classes.classes):
+        print(f"Equivalence class {i}")
+        print(klass.members[0].summary())
+        print(klass.members[0].text())
+        print()
+
     matplotlib.pyplot.show()

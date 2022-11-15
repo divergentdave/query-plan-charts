@@ -37,13 +37,11 @@ class Postgres(Backend):
             cursor.execute("VACUUM")
             cursor.execute("ANALYZE")
 
-    def plan_query_text(self, query: str) -> str:
+    def plan_query(self, query: str) -> "PostgresPlan":
         with self.connection.cursor() as cursor:
             cursor.execute(f"EXPLAIN {query};")
-            return "\n".join(row[0] for row in cursor)
+            text = "\n".join(row[0] for row in cursor)
 
-    def plan_query_structured(self, query: str) -> "PostgresPlan":
-        with self.connection.cursor() as cursor:
             cursor.execute(f"EXPLAIN (FORMAT JSON) {query};")
             doc, = cursor.fetchone()
             if not isinstance(doc, list):
@@ -52,7 +50,7 @@ class Postgres(Backend):
                 raise Exception(
                     "Outer list in plan output has {} elements"
                     .format(len(doc)))
-            return PostgresPlan(doc[0]["Plan"])
+            return PostgresPlan(doc[0]["Plan"], text)
 
 
 PLAN_KEYS_SIMPLE_COMPARISONS = [
@@ -128,8 +126,9 @@ def plan_summary_gen(node):
 
 
 class PostgresPlan(QueryPlan):
-    def __init__(self, plan):
+    def __init__(self, plan, text_plan):
         self.plan = plan
+        self.text_plan = text_plan
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PostgresPlan):
@@ -138,3 +137,6 @@ class PostgresPlan(QueryPlan):
 
     def summary(self) -> str:
         return "".join(plan_summary_gen(self.plan))
+
+    def text(self) -> str:
+        return self.text_plan

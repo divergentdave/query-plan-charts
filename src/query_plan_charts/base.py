@@ -5,10 +5,7 @@ class Backend:
     def prepare_indexes(self):
         raise NotImplementedError()
 
-    def plan_query_text(self, query: str) -> str:
-        raise NotImplementedError()
-
-    def plan_query_structured(self, query: str) -> "QueryPlan":
+    def plan_query(self, query: str) -> "QueryPlan":
         raise NotImplementedError()
 
 
@@ -21,6 +18,11 @@ class QueryPlan:
     """
 
     def summary(self) -> str:
+        """A short summary of the query plan's structure."""
+        raise NotImplementedError()
+
+    def text(self) -> str:
+        """A human-readable version of the query plan."""
         raise NotImplementedError()
 
 
