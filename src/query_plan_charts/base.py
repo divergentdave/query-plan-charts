@@ -33,7 +33,8 @@ class ParameterizedStatement:
 
 
 class ParameterConfig:
-    def __init__(self, start: int, stop: int, steps: int):
+    def __init__(self, start: int, stop: int, steps: int, name: str):
         self.start = start
         self.stop = stop
         self.steps = steps
+        self.name = name

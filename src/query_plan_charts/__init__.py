@@ -163,6 +163,8 @@ def run_2d(setup_statements: list[ParameterizedStatement],
         cmap=color_map,
         norm=norm,
     )
+    quadmesh.axes.set_xlabel(parameter_1.name)
+    quadmesh.axes.set_ylabel(parameter_2.name)
     colorbar = matplotlib.pyplot.colorbar(
         quadmesh,
     )

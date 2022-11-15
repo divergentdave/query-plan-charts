@@ -12,10 +12,10 @@ setup_statements = [
     "CREATE INDEX collect_jobs_interval_containment_index ON collect_jobs USING gist (task_id, batch_interval)",
     # Filler data
     { statement = "INSERT INTO tasks (task_id, aggregator_role, aggregator_endpoints, query_type, vdaf, max_batch_query_count, task_expiration, min_batch_size, time_precision, tolerable_clock_skew, collector_hpke_config) SELECT gen_random_bytes(16), 'LEADER', '{\"https://example.com/\", \"https://example.net/\"}', '\"TimeInterval\"', '\"Prio3Aes128Count\"', 1, '3000-01-01 00:00:00'::timestamp, 10, 300, 60, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' FROM generate_series(1, %s)", parameters = [
-        { start = 1, stop = 4000, steps = 3 },
+        { name = "Tasks", start = 1, stop = 4000, steps = 3 },
     ] },
     { statement = "INSERT INTO collect_jobs (collect_job_id, task_id, batch_identifier, batch_interval, aggregation_param, state) SELECT gen_random_uuid() AS collect_job_id, tasks.id AS task_id, gen_random_bytes(16) AS batch_identifier, tsrange('2000-01-01 00:00:00'::timestamp + '1 hour'::interval * time_offset, '2000-01-01 01:00:00'::timestamp + '1 hour'::interval * time_offset, '[)') AS batch_interval, '' AS aggregation_param, 'START' AS state FROM generate_series(1, %s) AS time_offset CROSS JOIN tasks", parameters = [
-        { start = 1, stop = 4000, steps = 3 },
+        { name = "Collect jobs per task", start = 1, stop = 4000, steps = 3 },
     ] },
 ]
 target_query = "SELECT collect_jobs.* FROM collect_jobs WHERE collect_jobs.task_id = 0 AND collect_jobs.batch_interval @> '2000-01-01 00:00:00'::timestamp"

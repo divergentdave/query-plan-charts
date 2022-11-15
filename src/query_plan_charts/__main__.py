@@ -116,11 +116,22 @@ def main():
                         file=sys.stderr,
                     )
                     sys.exit(1)
+                if "name" in raw_parameter:
+                    if not isinstance(raw_parameter["name"], str):
+                        print(
+                            "Value for 'name' must be a string",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
+                    name = raw_parameter["name"]
+                else:
+                    name = ""
 
                 parameters.append(ParameterConfig(
                     raw_parameter["start"],
                     raw_parameter["stop"],
                     raw_parameter["steps"],
+                    name,
                 ))
         else:
             print(
