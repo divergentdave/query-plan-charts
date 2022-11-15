@@ -1,0 +1,21 @@
+setup_statements = [
+    # Extensions
+    "CREATE EXTENSION pgcrypto",
+    "CREATE EXTENSION btree_gist",
+    # Enums
+    "CREATE TYPE COLLECT_JOB_STATE AS ENUM ('START', 'FINISHED', 'ABANDONED', 'DELETED')",
+    "CREATE TYPE AGGREGATOR_ROLE AS ENUM ('LEADER', 'HELPER')",
+    # Tables and indices
+    "CREATE TABLE tasks (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, task_id BYTEA UNIQUE NOT NULL, aggregator_role AGGREGATOR_ROLE NOT NULL, aggregator_endpoints TEXT[] NOT NULL, query_type JSON NOT NULL, vdaf JSON NOT NULL, max_batch_query_count BIGINT NOT NULL, task_expiration TIMESTAMP NOT NULL, min_batch_size BIGINT NOT NULL, time_precision BIGINT NOT NULL, tolerable_clock_skew BIGINT NOT NULL, collector_hpke_config BYTEA NOT NULL)",
+    "CREATE TABLE collect_jobs (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, collect_job_id UUID NOT NULL, task_id BIGINT NOT NULL, batch_identifier BYTEA NOT NULL, batch_interval TSRANGE, aggregation_param BYTEA NOT NULL, state COLLECT_JOB_STATE NOT NULL, report_count BIGINT, helper_aggregate_share BYTEA, leader_aggregate_share BYTEA, lease_expiry TIMESTAMP NOT NULL DEFAULT TIMESTAMP '-infinity', lease_token BYTEA, lease_attempts BIGINT NOT NULL DEFAULT 0, CONSTRAINT unique_collect_job_task_id_interval_aggregation_param UNIQUE(task_id, batch_identifier, aggregation_param), CONSTRAINT fk_task_id FOREIGN KEY(task_id) REFERENCES tasks(id))",
+    "CREATE INDEX collect_jobs_lease_expiry ON collect_jobs (lease_expiry)",
+    "CREATE INDEX collect_jobs_interval_containment_index ON collect_jobs USING gist (task_id, batch_interval)",
+    # Filler data
+    { statement = "INSERT INTO tasks (task_id, aggregator_role, aggregator_endpoints, query_type, vdaf, max_batch_query_count, task_expiration, min_batch_size, time_precision, tolerable_clock_skew, collector_hpke_config) SELECT gen_random_bytes(16), 'LEADER', '{\"https://example.com/\", \"https://example.net/\"}', '\"TimeInterval\"', '\"Prio3Aes128Count\"', 1, '3000-01-01 00:00:00'::timestamp, 10, 300, 60, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' FROM generate_series(1, %s)", parameters = [
+        { start = 1, stop = 4000, steps = 3 },
+    ] },
+    { statement = "INSERT INTO collect_jobs (collect_job_id, task_id, batch_identifier, batch_interval, aggregation_param, state) SELECT gen_random_uuid() AS collect_job_id, tasks.id AS task_id, gen_random_bytes(16) AS batch_identifier, tsrange('2000-01-01 00:00:00'::timestamp + '1 hour'::interval * time_offset, '2000-01-01 01:00:00'::timestamp + '1 hour'::interval * time_offset, '[)') AS batch_interval, '' AS aggregation_param, 'START' AS state FROM generate_series(1, %s) AS time_offset CROSS JOIN tasks", parameters = [
+        { start = 1, stop = 4000, steps = 3 },
+    ] },
+]
+target_query = "SELECT collect_jobs.* FROM collect_jobs WHERE collect_jobs.task_id = 0 AND collect_jobs.batch_interval @> '2000-01-01 00:00:00'::timestamp"
