@@ -75,7 +75,7 @@ SELECT
     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 FROM generate_series(1, %s)
 """
-parameters = [{ name = "Tasks", start = 1, stop = 4000, steps = 5 }]
+parameters = [{ name = "Tasks", start = 1, stop = 1000, steps = 7 }]
 
 [[setup_statements]]
 statement = """
@@ -94,7 +94,7 @@ FROM generate_series(1, %s) AS time_offset
 CROSS JOIN tasks
 """
 parameters = [
-    { name = "Collect jobs per task", start = 1, stop = 4000, steps = 5 },
+    { name = "Collect jobs per task", start = 1, stop = 1000, steps = 7 },
 ]
 
 [[setup_statements]]
