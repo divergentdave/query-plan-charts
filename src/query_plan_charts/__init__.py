@@ -125,6 +125,10 @@ def run_2d(setup_statements: list[ParameterizedStatement],
            parameter_2: ParameterConfig,
            target_query: str,
            title: str):
+    # First parameter: x-axis, column index of numpy 2D arrays, and thus the
+    # second index when indexing an array. Index variable `i`.
+    # Second parameter: y-axis, row index of numpy 2D arrays, and thus the
+    # first index when indexing an array. Index variable `j`.
     parameter_1_values = choose_parameter_values(
         parameter_1.start, parameter_1.stop, parameter_1.steps)
     parameter_2_values = choose_parameter_values(
@@ -149,7 +153,7 @@ def run_2d(setup_statements: list[ParameterizedStatement],
         plan = run_single_case(
             setup_statements, [value_1, value_2], target_query)
         class_idx = equivalence_classes.add((i, j), plan)
-        colors[i, j] = class_idx
+        colors[j, i] = class_idx
     class_count = len(equivalence_classes.classes)
 
     mesh_x = centers_to_boundaries(parameter_1_values)
@@ -181,6 +185,12 @@ def run_2d(setup_statements: list[ParameterizedStatement],
 
     for (i, klass) in enumerate(equivalence_classes.classes):
         print(f"Equivalence class {i}")
+        param_values = []
+        for (idx_1, value_1) in enumerate(parameter_1_values):
+            for (idx_2, value_2) in enumerate(parameter_2_values):
+                if colors[idx_2, idx_1] == i:
+                    param_values.append(f"({value_1}, {value_2})")
+        print("Parameter values: {}".format(", ".join(param_values[::-1])))
         print(klass.members[0].summary())
         print(klass.members[0].text())
         print()
