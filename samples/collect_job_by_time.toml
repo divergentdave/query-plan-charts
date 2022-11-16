@@ -54,16 +54,9 @@ CREATE TABLE collect_jobs (
     lease_expiry TIMESTAMP NOT NULL DEFAULT TIMESTAMP '-infinity',
     lease_token BYTEA,
     lease_attempts BIGINT NOT NULL DEFAULT 0,
-    CONSTRAINT unique_collect_job_task_id_interval_aggregation_param UNIQUE(task_id, batch_identifier, aggregation_param),
     CONSTRAINT fk_task_id FOREIGN KEY(task_id) REFERENCES tasks(id)
 )
 """
-
-[[setup_statements]]
-statement = "CREATE INDEX collect_jobs_lease_expiry ON collect_jobs (lease_expiry)"
-
-[[setup_statements]]
-statement = "CREATE INDEX collect_jobs_interval_containment_index ON collect_jobs USING gist (task_id, batch_interval)"
 
 # Filler data
 [[setup_statements]]
@@ -82,7 +75,7 @@ SELECT
     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 FROM generate_series(1, %s)
 """
-parameters = [{ name = "Tasks", start = 1, stop = 4000, steps = 3 }]
+parameters = [{ name = "Tasks", start = 1, stop = 4000, steps = 5 }]
 
 [[setup_statements]]
 statement = """
@@ -101,5 +94,18 @@ FROM generate_series(1, %s) AS time_offset
 CROSS JOIN tasks
 """
 parameters = [
-    { name = "Collect jobs per task", start = 1, stop = 4000, steps = 3 },
+    { name = "Collect jobs per task", start = 1, stop = 4000, steps = 5 },
 ]
+
+[[setup_statements]]
+statement = "REINDEX TABLE collect_jobs"
+
+# Create additional indexes after filling the table
+[[setup_statements]]
+statement = "CREATE INDEX collect_jobs_lease_expiry ON collect_jobs (lease_expiry)"
+
+[[setup_statements]]
+statement = "CREATE INDEX collect_jobs_interval_containment_index ON collect_jobs USING gist (task_id, batch_interval)"
+
+[[setup_statements]]
+statement = "CREATE UNIQUE INDEX unique_collect_job_task_id_interval_aggregation_param ON collect_jobs (task_id, batch_identifier, aggregation_param)"
