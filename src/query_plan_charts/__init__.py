@@ -146,7 +146,7 @@ def run_2d(setup_statements: list[ParameterizedStatement],
     ))
     equivalence_classes = EquivalenceClasses()
     colors = numpy.zeros(
-        (len(parameter_1_values), len(parameter_2_values)),
+        (len(parameter_2_values), len(parameter_1_values)),
         dtype="int8",
     )
     for ((i, value_1), (j, value_2)) in tqdm.tqdm(parameter_pairs):
