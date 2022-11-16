@@ -180,6 +180,7 @@ def run_2d(setup_statements: list[ParameterizedStatement],
         list(range(class_count)),
         labels=[cls.members[0].summary()
                 for cls in equivalence_classes.classes],
+        wrap=True,
     )
     colorbar.ax.invert_yaxis()
 
