@@ -114,7 +114,7 @@ def plan_eq(left, right) -> bool:
 def plan_summary_gen(node):
     yield node["Node Type"]
     if "Plans" in node:
-        yield "("
+        yield "( "
         first = True
         for child in node["Plans"]:
             if first:
@@ -122,7 +122,7 @@ def plan_summary_gen(node):
             else:
                 yield ", "
             yield from plan_summary_gen(child)
-        yield ")"
+        yield " )"
 
 
 class PostgresPlan(QueryPlan):
