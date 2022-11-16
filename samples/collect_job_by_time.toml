@@ -1,8 +1,8 @@
 title = "get_collect_jobs_including_time()"
 target_query = """
 SELECT collect_jobs.* FROM collect_jobs
-WHERE collect_jobs.task_id = 0
-    AND collect_jobs.batch_interval @> '2000-01-01 00:00:00'::timestamp
+WHERE collect_jobs.task_id = 1
+    AND collect_jobs.batch_interval @> '2001-09-09 01:46:40'::timestamp
 """
 
 # Extensions
@@ -94,7 +94,7 @@ SELECT
     gen_random_uuid(),
     tasks.id,
     gen_random_bytes(16),
-    tsrange('2000-01-01 00:00:00'::timestamp + '1 hour'::interval * time_offset, '2000-01-01 01:00:00'::timestamp + '1 hour'::interval * time_offset, '[)'),
+    tsrange('2001-09-09 01:46:40'::timestamp + '8 hour'::interval * (time_offset - 1), '2001-09-09 01:46:40'::timestamp + '8 hour'::interval * time_offset, '[)'),
     '',
     'START'
 FROM generate_series(1, %s) AS time_offset
