@@ -7,6 +7,7 @@ import numpy
 import matplotlib.pyplot  # type: ignore
 from matplotlib.cm import get_cmap  # type: ignore
 from matplotlib.colors import NoNorm  # type: ignore
+from matplotlib.ticker import FuncFormatter, MultipleLocator  # type: ignore
 import tqdm
 
 from .base import ParameterizedStatement, ParameterConfig, QueryPlan
@@ -140,6 +141,7 @@ def run_2d(setup_statements: list[ParameterizedStatement],
             "single value"
         )
 
+    # Evaluate the query plan with every combination of parameter values.
     parameter_pairs = list(itertools.product(
         enumerate(parameter_1_values.tolist()),
         enumerate(parameter_2_values.tolist()),
@@ -149,31 +151,41 @@ def run_2d(setup_statements: list[ParameterizedStatement],
         (len(parameter_2_values), len(parameter_1_values)),
         dtype="int8",
     )
+    costs = numpy.zeros(
+        (len(parameter_2_values), len(parameter_1_values)),
+        dtype="float64",
+    )
     for ((i, value_1), (j, value_2)) in tqdm.tqdm(parameter_pairs):
         plan = run_single_case(
             setup_statements, [value_1, value_2], target_query)
         class_idx = equivalence_classes.add((i, j), plan)
         colors[j, i] = class_idx
+        costs[j, i] = plan.cost()
     class_count = len(equivalence_classes.classes)
 
+    # Calculate node coordinates for the `pcolormesh` quads, such that each
+    # parameter choice is in the center of a quad. (on a log-log plot)
     mesh_x = centers_to_boundaries(parameter_1_values)
     mesh_y = centers_to_boundaries(parameter_2_values)
 
-    matplotlib.pyplot.xscale("log")
-    matplotlib.pyplot.yscale("log")
+    # Make the `pcolormesh` plot, and associated color bar. Color each plan
+    # based on how we divided them into equivalence classes by topology.
+    fig, ax = matplotlib.pyplot.subplots()
+    ax.set_xscale("log")
+    ax.set_yscale("log")
     color_map = get_cmap("viridis", class_count)
     norm = NoNorm(vmin=0, vmax=class_count - 1)
-    quadmesh = matplotlib.pyplot.pcolormesh(
+    quadmesh = ax.pcolormesh(
         mesh_x,
         mesh_y,
         colors,
         cmap=color_map,
         norm=norm,
     )
-    quadmesh.axes.set_title(title)
-    quadmesh.axes.set_xlabel(parameter_1.name)
-    quadmesh.axes.set_ylabel(parameter_2.name)
-    colorbar = matplotlib.pyplot.colorbar(
+    ax.set_title(title)
+    ax.set_xlabel(parameter_1.name)
+    ax.set_ylabel(parameter_2.name)
+    colorbar = fig.colorbar(
         quadmesh,
     )
     colorbar.set_ticks(
@@ -184,6 +196,28 @@ def run_2d(setup_statements: list[ParameterizedStatement],
     )
     colorbar.ax.invert_yaxis()
 
+    # Make a 3D surface plot of the query plan cost. 3D plots do not support
+    # log scale, so we pre-transform the data instead and use substitute tick
+    # labels.
+    fig, ax = matplotlib.pyplot.subplots(subplot_kw={"projection": "3d"})
+    surf_x, surf_y = numpy.meshgrid(
+        numpy.log10(parameter_1_values),
+        numpy.log10(parameter_2_values),
+    )
+    ax.plot_surface(
+        surf_x,
+        surf_y,
+        costs,
+    )
+    locator = MultipleLocator(1)
+    formatter = FuncFormatter(lambda val, _: "$10^{{{:.0f}}}$".format(val))
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(formatter)
+    ax.yaxis.set_major_locator(locator)
+    ax.yaxis.set_major_formatter(formatter)
+
+    # Print more detailed information on each equivalence class to stdout,
+    # including a representative text-format query plan.
     for (i, klass) in enumerate(equivalence_classes.classes):
         print(f"Equivalence class {i}")
         param_values = []

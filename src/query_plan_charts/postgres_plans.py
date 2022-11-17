@@ -149,3 +149,6 @@ class PostgresPlan(QueryPlan):
 
     def text(self) -> str:
         return self.text_plan
+
+    def cost(self) -> float:
+        return self.plan["Total Cost"]

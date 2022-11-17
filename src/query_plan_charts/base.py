@@ -25,6 +25,10 @@ class QueryPlan:
         """A human-readable version of the query plan."""
         raise NotImplementedError()
 
+    def cost(self) -> float:
+        """Returns a numeric cost estimate, assigned by the query planner."""
+        raise NotImplementedError()
+
 
 class ParameterizedStatement:
     def __init__(self, statement: str, parameter_count: int):
