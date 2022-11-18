@@ -93,9 +93,7 @@ SELECT
 FROM generate_series(1, %s) AS time_offset
 CROSS JOIN tasks
 """
-parameters = [
-    { name = "Collect jobs per task", start = 1, stop = 1000, steps = 7 },
-]
+parameters = [{ name = "Collect jobs per task", start = 1, stop = 1000, steps = 7 }]
 
 [[setup_statements]]
 statement = "REINDEX TABLE collect_jobs"
