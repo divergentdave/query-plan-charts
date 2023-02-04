@@ -91,6 +91,7 @@ PLAN_KEYS_EXPECTED = set(PLAN_KEYS_SIMPLE_COMPARISONS).union({
     "Total Cost",
     "Plan Rows",
     "Plan Width",
+    "Planned Partitions",
 })
 
 
