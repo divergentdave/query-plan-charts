@@ -64,6 +64,16 @@ class EquivalenceClass:
     key: typing.Any
     members: list[QueryPlan]
 
+    def highest_cost_plan(self) -> QueryPlan | None:
+        max_cost = 0.0
+        plan = None
+        for member in self.members:
+            current_cost = member.cost()
+            if current_cost > max_cost:
+                max_cost = current_cost
+                plan = member
+        return plan
+
 
 class EquivalenceClasses:
     def __init__(self):
@@ -227,7 +237,7 @@ def run_2d(setup_statements: list[ParameterizedStatement],
                     param_values.append(f"({value_1}, {value_2})")
         print("Parameter values: {}".format(", ".join(param_values[::-1])))
         print(klass.members[0].summary())
-        print(klass.members[0].text())
+        print(klass.highest_cost_plan().text())
         print()
 
     matplotlib.pyplot.show()
