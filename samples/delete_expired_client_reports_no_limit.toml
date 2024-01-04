@@ -1,0 +1,189 @@
+title = "delete_expired_client_reports(), no LIMIT"
+
+# The baseline time is: 2001-09-09 01:46:40, which is 1,000,000,000 seconds
+# after the UNIX epoch.
+#
+# We want most, but not all, client reports to be past the two week report
+# expiry age (1209600 seconds).
+
+target_query = """
+DELETE FROM client_reports
+USING tasks
+WHERE tasks.task_id = '\\x0000000000000000000000000000000000000000000000000000000000000000'::bytea
+    AND tasks.id = client_reports.task_id
+    AND client_reports.client_timestamp < COALESCE(
+        '2001-09-09 01:46:40'::TIMESTAMP - tasks.report_expiry_age * '1 second'::INTERVAL,
+        '-infinity'::TIMESTAMP
+    )
+"""
+
+# This query ends up having a worse cost when both parameters are at their maximum.
+
+# Extensions
+[[setup_statements]]
+statement = "CREATE EXTENSION pgcrypto"
+
+[[setup_statements]]
+statement = "CREATE EXTENSION btree_gist"
+
+# Enums
+[[setup_statements]]
+statement = "CREATE TYPE AGGREGATOR_ROLE AS ENUM ('LEADER', 'HELPER')"
+
+[[setup_statements]]
+statement = "CREATE TYPE AUTH_TOKEN_TYPE AS ENUM('DAP_AUTH', 'BEARER')"
+
+# Tables and indices
+[[setup_statements]]
+statement = """
+CREATE TABLE tasks (
+    id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    task_id                     BYTEA UNIQUE NOT NULL,
+    aggregator_role             AGGREGATOR_ROLE NOT NULL,
+    peer_aggregator_endpoint    TEXT NOT NULL,
+    query_type                  JSONB NOT NULL,
+    vdaf                        JSON NOT NULL,
+    max_batch_query_count       BIGINT NOT NULL,
+    task_expiration             TIMESTAMP,
+    report_expiry_age           BIGINT,
+    min_batch_size              BIGINT NOT NULL,
+    time_precision              BIGINT NOT NULL,
+    tolerable_clock_skew        BIGINT NOT NULL,
+    collector_hpke_config       BYTEA,
+    vdaf_verify_key             BYTEA NOT NULL,
+    aggregator_auth_token_type  AUTH_TOKEN_TYPE,
+    aggregator_auth_token       BYTEA,
+    aggregator_auth_token_hash  BYTEA,
+    collector_auth_token_type   AUTH_TOKEN_TYPE,
+    collector_auth_token_hash   BYTEA,
+    created_at                  TIMESTAMP NOT NULL,
+    updated_by                  TEXT NOT NULL,
+
+    CONSTRAINT aggregator_auth_token_null CHECK (
+        ((aggregator_auth_token_type IS NOT NULL) AND (aggregator_auth_token IS NULL) != (aggregator_auth_token_hash IS NULL))
+        OR ((aggregator_auth_token_type IS NULL) AND (aggregator_auth_token IS NULL) AND (aggregator_auth_token_hash IS NULL))
+    ),
+    CONSTRAINT collector_auth_token_null CHECK ((collector_auth_token_type IS NULL) = (collector_auth_token_hash IS NULL))
+)
+"""
+
+[[setup_statements]]
+statement = """
+CREATE TABLE client_reports (
+    id                              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    task_id                         BIGINT NOT NULL,
+    report_id                       BYTEA NOT NULL,
+    client_timestamp                TIMESTAMP NOT NULL,
+    extensions                      BYTEA,
+    public_share                    BYTEA,
+    leader_input_share              BYTEA,
+    helper_encrypted_input_share    BYTEA,
+    aggregation_started             BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at                      TIMESTAMP NOT NULL,
+    updated_at                      TIMESTAMP NOT NULL,
+    updated_by                      TEXT NOT NULL,
+
+    CONSTRAINT client_reports_unique_task_id_and_report_id UNIQUE (task_id, report_id),
+    CONSTRAINT fk_task_id FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE
+)
+"""
+
+# Filler data
+[[setup_statements]]
+statement = """
+INSERT INTO tasks (
+    task_id,
+    aggregator_role,
+    peer_aggregator_endpoint,
+    query_type,
+    vdaf,
+    max_batch_query_count,
+    task_expiration,
+    report_expiry_age,
+    min_batch_size,
+    time_precision,
+    tolerable_clock_skew,
+    collector_hpke_config,
+    vdaf_verify_key,
+    aggregator_auth_token_type,
+    aggregator_auth_token,
+    aggregator_auth_token_hash,
+    collector_auth_token_type,
+    collector_auth_token_hash,
+    created_at,
+    updated_by
+)
+SELECT
+    CASE WHEN i = 1 THEN
+    '\\x0000000000000000000000000000000000000000000000000000000000000000'::bytea
+    ELSE gen_random_bytes(32) END,
+    'LEADER',
+    'https://example.com/',
+    '"TimeInterval"',
+    '"Prio3Count"',
+    1,
+    '3000-01-01 00:00:00'::timestamp,
+    14 * 24 * 60 * 60,
+    100,
+    300,
+    60,
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    gen_random_bytes(16),
+    'BEARER',
+    'Y29sbGVjdG9yLWFiY2RlZjAw',
+    NULL,
+    'BEARER',
+    'hT_ixzv_X1CmJmHGT7jYSEBbdB-CN9H8WxAvjgv4rms',
+    '2023-01-01 00:00:00'::timestamp,
+    'test'
+FROM generate_series(1, %s) AS i
+"""
+parameters = [{ name = "Tasks", start = 1, stop = 100, steps = 5 }]
+
+[[setup_statements]]
+statement = """
+WITH n AS (VALUES (%s))
+INSERT INTO client_reports (
+    task_id,
+    report_id,
+    client_timestamp,
+    extensions,
+    public_share,
+    leader_input_share,
+    helper_encrypted_input_share,
+    aggregation_started,
+    created_at,
+    updated_at,
+    updated_by
+)
+SELECT
+    tasks.id,
+    gen_random_bytes(16),
+    '2001-09-09 01:46:40'::timestamp - '15 day'::interval * ((i - 1)::float / ((table n) - 1)::float),
+    '',
+    gen_random_bytes(64),
+    gen_random_bytes(1024),
+    gen_random_bytes(64),
+    false,
+    '2023-01-01 00:00:00'::timestamp,
+    '2023-01-01 00:00:00'::timestamp,
+    'test'
+FROM generate_series(1, (table n)) AS i
+CROSS JOIN tasks
+"""
+parameters = [
+    { name = "Reports per task", start = 10, stop = 100000, steps = 9 },
+]
+
+[[setup_statements]]
+statement = "REINDEX TABLE client_reports"
+
+# Create additional indices after filling the tables
+[[setup_statements]]
+statement = "CREATE INDEX task_id_index ON tasks(task_id)"
+
+[[setup_statements]]
+statement = "CREATE INDEX client_reports_task_and_timestamp_unaggregated_index ON client_reports (task_id, client_timestamp) WHERE aggregation_started = FALSE"
+
+[[setup_statements]]
+statement = "CREATE INDEX client_reports_task_and_timestamp_index ON client_reports (task_id, client_timestamp)"
