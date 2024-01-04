@@ -31,6 +31,9 @@ class Postgres(Backend):
     def execute_statement(self, statement: str, parameter_values: list[int]):
         with self.connection.cursor() as cursor:
             cursor.execute(statement, parameter_values)
+            if cursor.description is not None:
+                for row in cursor.fetchall():
+                    print(row)
 
     def prepare_indexes(self):
         with self.connection.cursor() as cursor:
