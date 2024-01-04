@@ -22,6 +22,10 @@ USING client_reports_to_delete
 WHERE client_reports.id = client_reports_to_delete.id
 """
 
+# Session configuration
+[[setup_statements]]
+statement = "SET random_page_cost = 1.1"
+
 # Extensions
 [[setup_statements]]
 statement = "CREATE EXTENSION pgcrypto"

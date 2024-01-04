@@ -17,7 +17,9 @@ WHERE tasks.task_id = '\\x000000000000000000000000000000000000000000000000000000
     )
 """
 
-# This query ends up having a worse cost when both parameters are at their maximum.
+# Session configuration
+[[setup_statements]]
+statement = "SET random_page_cost = 1.1"
 
 # Extensions
 [[setup_statements]]
